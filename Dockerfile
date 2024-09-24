@@ -46,8 +46,6 @@ RUN apt-get update && \
   libffi-dev \
   sudo \
   git-core \
-  # Kerberos, needed for MS SQL Python driver to compile on arm64
-  libkrb5-dev \
   # Postgres client
   libpq-dev \
   # ODBC support:
@@ -63,6 +61,11 @@ RUN apt-get update && \
   libsasl2-modules-gssapi-mit && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
+
+# Kerberos, needed for MS SQL Python driver to compile on arm64
+# libkrb5-dev relies on krb-multidev which is recommended
+RUN apt-get update && \
+apt-get install -y libkrb5-dev
 
 
 ARG TARGETPLATFORM
@@ -91,7 +94,8 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 
 # Avoid crashes, including corrupted cache artifacts, when building multi-platform images with GitHub Actions.
 RUN /etc/poetry/bin/poetry cache clear pypi --all
-
+# This works ugly but it overcomes sasl issue
+RUN pip3 install phoenixdb==1.2.2
 COPY pyproject.toml poetry.lock ./
 
 ARG POETRY_OPTIONS="--no-root --no-interaction --no-ansi"
