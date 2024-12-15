@@ -1,9 +1,10 @@
+version: "3.4"
 x-redash-service: &redash-service
-  image: engeenity/redash-arm64:latest
+  image: redash/redash
   depends_on:
     - postgres
     - redis
-  env_file: /opt/redash/env/redash.env
+  env_file: /opt/redash/env
   restart: always
 services:
   server:
@@ -13,55 +14,68 @@ services:
       - "5000:5000"
     environment:
       REDASH_WEB_WORKERS: 4
+    networks:
+      - redash_net
   scheduler:
     <<: *redash-service
     command: scheduler
-    depends_on:
-      - server
+    environment:
+      QUEUES: "celery"
+      WORKERS_COUNT: 1
+    networks:
+      - redash_net
   scheduled_worker:
     <<: *redash-service
     command: worker
-    depends_on:
-      - server
     environment:
       QUEUES: "scheduled_queries,schemas"
       WORKERS_COUNT: 1
+    networks:
+      - redash_net
   adhoc_worker:
     <<: *redash-service
     command: worker
-    depends_on:
-      - server
+    networks:
+      - redash_net
     environment:
       QUEUES: "queries"
       WORKERS_COUNT: 2
   redis:
     image: redis/redis-stack:latest
+    #command: ["redis-server", "/etc/redis/redis.conf"]
     env_file:
-      - /opt/redash/env/redis.env
+      - ./env/redis.env
     volumes:
-      - /opt/redash/redis:/etc/redis
+      - ./redis:/etc/redis
     ports:
       - 6379:6379
       - 8001:8001
-    restart: unless-stopped
+    networks:
+      - redash_net
+    restart: always
   postgres:
-    image: pgautoupgrade/pgautoupgrade:latest
-    env_file: /opt/redash/env/pg.env
+    image: postgres:9.6-alpine
+    env_file: ./env/postgres.env
+    networks:
+      - redash_net
     volumes:
-      - /opt/redash/postgres/postgres-data:/var/lib/postgresql/data
-    restart: unless-stopped
+      - postgres-vol:/var/lib/postgresql/data
+    restart: always
   nginx:
     image: redash/nginx:latest
     ports:
       - "80:80"
     depends_on:
       - server
+    networks:
+      - redash_net
     links:
       - server:redash
     restart: always
-  worker:
-    <<: *redash-service
-    command: worker
-    environment:
-      QUEUES: "periodic,emails,default"
-      WORKERS_COUNT: 1
+volumes:
+  postgres-vol:
+    external: true
+networks:
+  redash_net:
+    name: redash-network
+    external: true

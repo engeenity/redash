@@ -18,7 +18,7 @@ fi
 
 # Ensure the 'docker' and 'docker-compose' commands are available
 # and if not, ensure the script can install them
-SKIP_DOCKER_INSTALL=no
+SKIP_DOCKER_INSTALL=yes
 if [ -x "$(command -v docker)" ]; then
   # The first condition is 'docker-compose (v1)' and the second is 'docker compose (v2)'.
   if [ -x "$(command -v docker-compose)" ] || (docker compose 1> /dev/null 2>& 1 && [ $? -eq 0 ]); then
@@ -163,7 +163,7 @@ create_directories() {
     chown "$USER:" "$REDASH_BASE_PATH"
   fi
 
-  if [ -e "$REDASH_BASE_PATH"/postgres-data ]; then
+  if [ -e "$REDASH_BASE_PATH"/postgres/postgres-data ]; then
     # PostgreSQL database directory seems to exist already
 
     if [ "x$OVERWRITE" = "xyes" ]; then
@@ -174,11 +174,11 @@ create_directories() {
       fi
 
       echo "Removing old Redash PG database directory"
-      rm -rf "$REDASH_BASE_PATH"/postgres-data
-      mkdir "$REDASH_BASE_PATH"/postgres-data
+      rm -rf "$REDASH_BASE_PATH"/postgres/postgres-data
+      mkdir "$REDASH_BASE_PATH"/postgres/postgres-data
     fi
   else
-    mkdir "$REDASH_BASE_PATH"/postgres-data
+    mkdir "$REDASH_BASE_PATH"/postgres/postgres-data
   fi
 }
 
